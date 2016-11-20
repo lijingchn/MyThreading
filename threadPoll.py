@@ -12,10 +12,10 @@ class Worker(Thread):
         Thread.__init__(self, **kwds)
         self.id = Worker.worker_count
         Worker.worker_count += 1
-        self.setDeamon(True)
+        self.setDaemon(True)
         self.workQueue = workQueue
         self.resultQueue = resultQueue
-        self.timeout = tiemout
+        self.timeout = timeout
         self.start()
 
     def run(self):
@@ -33,14 +33,15 @@ class Worker(Thread):
             except:
                 print 'worker[%2d]' % self.id, sys.exc_info()[:2]
 
-class WorkerManange:
+class WorkerManager:
     def __init__(self, num_of_workers=10, timeout=1):
         self.workQueue = Queue.Queue()
         self.resultQueue = Queue.Queue()
         self.workers = []
         self.timeout = timeout
         self._recruitThreads(num_of_workers)
-    def __recruitThreads(self, num_of_workers):
+
+    def _recruitThreads(self, num_of_workers):
         for i in range(num_of_workers):
             worker = Worker(self.workQueue, self.resultQueue, self.timeout)
             self.workers.append(worker)
@@ -52,7 +53,76 @@ class WorkerManange:
         while len(self.workers):
             worker = self.workers.pop()
             worker.join()
-            if worker
+            if worker.isAlive() and not self.workQueue.empty():
+                self.workers.append(worker)
+        print "All jobs are completed."
+
+    def add_job(self, callable, *args, **kwds):
+        self.workQueue.put((callable, args, kwds))
+
+    def get_result(self, *args, **kwds):
+        return self.resultQueue.get(*args, **kwds)
+
+def test_job(id, sleep=0.1):
+    try:
+        urllib.urlopen("https://www.baidu.com").read()
+        print str(id)+">>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+    except:
+        print '[%4d]' % id, sys.exc_info()[:2]
+    return id
+
+def test():
+    import socket
+    socket.setdefaulttimeout(10)
+    print 'start testing'
+    wm = WorkerManager(3)
+    for i in range(20):
+        wm.add_job(test_job, i, i*0.1)
+    wm.wait_for_complete()
+    print 'end testing'
+
+if __name__ == "__main__":
+    test()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
